@@ -86,7 +86,12 @@ class User(Base):
 				user_obj.email = data.email
 				user_obj.email_verified = False
 			if data.password:
-				user_obj.set_password(data.password)
+				user_obj.set_password(data.password, db)
+				#Revoke all the tokens of this User
+				token_families = db.query(TokenFamily).filter_by(user_id=user_obj.id).all()
+				for token_family in token_families:
+					db.delete(token_family)
+
 			check_list = [ 
 				(data, "first_name", user_detail_obj, "first_name"),
 				(data, "last_name", user_detail_obj, "last_name"),

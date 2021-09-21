@@ -89,7 +89,7 @@ class UserUpdateSchema(BaseModel):
     def validate_password(cls, value, values):
         db = SessionLocal()
         user_obj = db.query(models.User).get(values["user_id"])
-        if user_obj.check_password(value["password"]):
+        if user_obj.check_password(value):
             raise ValueError('Password should not be same as current password')
         if value and not re.fullmatch("^(?=.*[A-Z])(?=.*[!@#$&*])(?=.*[0-9])(?=.*[a-z].).{8,}$", value):
             raise ValueError('Password must have 1 uppercase letter, 1 lowercase letter, 1 digit, 1 special character, and length must be grater then 8')

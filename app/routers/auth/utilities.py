@@ -56,7 +56,7 @@ def get_login_tokens(user_obj, token_family_id, db: Session) -> dict:
 
 def verify_token_code(token_code, db: Session):
 	token_obj = db.query(models.LoginToken).filter_by(token_type="code", token=token_code).first()
-	if token_obj:
+	if token_obj and token_obj.is_valid:
 		try: 
 			payload = jwt.decode(token_obj.token, app_config.TOKEN_CODE_SECRET_KEY, algorithms=["HS256"])
 			return payload

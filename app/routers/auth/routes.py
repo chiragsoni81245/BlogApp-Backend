@@ -91,7 +91,6 @@ async def refresh_login_tokens(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/logout")
-@is_authorized
 async def logout_user(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()
 	try:
