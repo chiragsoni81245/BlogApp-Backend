@@ -25,7 +25,6 @@ class GetLoginTokenSchema(BaseModel):
 
 class LogoutDataSchema(BaseModel):
 
-    access_token: str
     refresh_token: str
 
 
