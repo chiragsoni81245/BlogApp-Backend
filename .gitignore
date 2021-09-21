@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+migration/
+alembic.ini
+app/static/
+venv/
