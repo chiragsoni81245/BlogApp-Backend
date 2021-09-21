@@ -20,10 +20,10 @@ class app_config():
 
         if os.environ.get("ENVIRONMENT")=="Development":
             SECRET_KEY = '23ertyhjko0987ytfdsew5tyu890ik cxdsertyujkuytfddftyuhb mkdfgyhujjhgfdxdfvbhjkml,kojhygfc'
-            SQLALCHEMY_DATABASE_URL = os.environ.get("SQLALCHEMY_DATABASE_URL") or "postgresql://admin:Awakinn008@localhost:5432/blog_app"
+            SQLALCHEMY_DATABASE_URL = os.environ.get("SQLALCHEMY_DATABASE_URL") or "postgresql://admin:007@ajay@localhost:5432/blog_app"
         elif os.environ.get("ENVIRONMENT")=="Testing":
             SECRET_KEY = '23ertyhjko0987ytfdsew5tyu890ik cxdsertyujkuytfddftyuhb mkdfgyhujjhgfdxdfvbhjkml,kojhygfc'
-            SQLALCHEMY_DATABASE_URL = "postgresql://admin:Awakinn008@localhost:5432/test_blog_app"
+            SQLALCHEMY_DATABASE_URL = "postgresql://admin:007@ajay@localhost:5432/test_blog_app"
             TEST_ROOT_DIRECTORY = os.getcwd()
         else:
             print("Invalid Value of ENVIRONMENT in environment vriables")
