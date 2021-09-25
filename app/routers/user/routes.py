@@ -18,12 +18,7 @@ def get_user_details(request: Request, db: Session = Depends(get_db)):
 		UserDetail.last_name,
 		UserDetail.contact_no,
 		UserDetail.date_of_birth.label('dob'),
-		Address.address_line_1,
-		Address.address_line_2,
-		Address.city,
-		Address.state,
-		Address.pincode
-	).join(UserDetail, UserDetail.user_id==User.id, isouter=True).join(Address, Address.user_id==User.id, isouter=True).filter( User.id==request.current_user.id ).first()
+	).join(UserDetail, UserDetail.user_id==User.id, isouter=True).filter( User.id==request.current_user.id ).first()
 
 	return { "result": jsonable_encoder(user_details) }
 
