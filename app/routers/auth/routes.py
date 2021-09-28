@@ -29,7 +29,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
 				return { "result": { "code": get_token_code(client, token_family_obj.id, user_obj, db) } }
 		return JSONResponse(
 			content={ "error_msg": "Invalid Credentials" }, 
-			status_code=500
+			status_code=401
 		)
 	except ValidationError:
 		return JSONResponse(
