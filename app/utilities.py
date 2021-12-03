@@ -10,7 +10,8 @@ def get_error_messages(error):
 			error_msg.append("Invalid Format")
 		else:
 			if error_info["loc"][0].lower() not in error_info["msg"].lower():
-				msg = "{} {}".format(error_info["loc"][0], error_info["msg"])
+				# msg = "{} {}".format(error_info["loc"][0], error_info["msg"])
+				msg = error_info["msg"]
 			else:
 				msg = error_info["msg"]
 			msg = msg[0].upper() + msg[1:]

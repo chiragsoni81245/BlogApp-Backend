@@ -22,7 +22,7 @@ async def forget_passowrd(request: Request, db : Session = Depends(get_db) ):
 	except ValidationError as error:
 		return JSONResponse(
 			content={ "error_msg": get_error_messages(error) },
-			status_code=500
+			status_code=400
 		)
 
 
@@ -36,7 +36,7 @@ async def user_verify_otp(request: Request, db: Session = Depends(get_db)):
 	except ValidationError as error:
 		return JSONResponse(
 			content={ "error_msg": get_error_messages(error) },
-			status_code=500
+			status_code=400
 		)
 
 
@@ -57,11 +57,11 @@ async def reset_password(request: Request, db: Session = Depends(get_db)):
 			return { "status": "success" }
 		return JSONResponse(
 			content={ "error_msg": ["Invalid/Expired Reset Password Token"] },
-			status_code=500
+			status_code=400
 		)
 	except ValidationError as error:
 		return JSONResponse(
 			content={ "error_msg": get_error_messages(error) },
-			status_code=500
+			status_code=400
 		)
 

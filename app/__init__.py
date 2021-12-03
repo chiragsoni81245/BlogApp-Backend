@@ -10,6 +10,8 @@ app.add_middleware(SessionMiddleware, secret_key='-R5Sy4SY1nRpLoHOHCDDVobz')
 
 from .routers.auth import router as auth_router
 from .routers.user import router as user_router
+from .routers.blog import router as blog_router
 
 app.include_router(auth_router, prefix="/api/auth")
 app.include_router(user_router, prefix="/api/user")
+app.include_router(blog_router, prefix="/api/blogs")
