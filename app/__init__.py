@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-
-
+from blog_recommendation_system import PopularityBaseRecommander
+from blog_recommendation_system import ContentBaseRecommender
 app = FastAPI()
+popularity_base_recommander = PopularityBaseRecommander()
+content_base_recommander = ContentBaseRecommender()
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.add_middleware(SessionMiddleware, secret_key='-R5Sy4SY1nRpLoHOHCDDVobz')

@@ -13,7 +13,7 @@ class app_config():
         REST_PASSWORD_TOKEN_EXPIRY_TIME = 300
         TOKEN_CODE_SECRET_KEY = 'setrdthfgkjhn bcvxset45r678347y7ert89plmnbvcer678iol,m xzser678iknbvcdrt6789olm vcxsder56789oiuyreszkj'
         REST_PASSWORD_TOKEN_SECRET_KEY = 'setrdthfdsfbhsdfbnsdfndfn678347y7ert89plmnbvcer678iol,m xzser678iknbvcdrt6789olm vcxsder56789oiuyreszkj'
-        
+        AVG_WPM = 265
         EMAIL = "testemailservice22@gmail.com"
         PASSWORD = "test101@ajay"
         MAIL_SERVER = 'smtp.gmail.com'

@@ -5,6 +5,7 @@ import sqlalchemy
 from sqlalchemy.sql.functions import user
 from sqlalchemy.sql.schema import UniqueConstraint
 from sqlalchemy.sql.sqltypes import BigInteger
+from app.config import app_config
 from app.database import Base, SessionLocal, engine, get_db
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session, relationship
@@ -15,12 +16,13 @@ from ..schemas.auth_schema import *
 from ..schemas.blog_schema import *
 from .blog import *
 from ..schemas import Result
-from ..utilities import get_error_messages
+from ..utilities import countWords, get_error_messages
 from pydantic import ValidationError
 import base64, os
 from pyotp import TOTP
 import aiofiles
 from elasticsearch_client import es_submit_blog_data, es_update_blog_data, es_delete_blog_data
+import math
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -182,13 +184,17 @@ class User(Base):
 		data.update({"user_id": self.id})
 		try:
 			data = BlogCreateSchema(**data)
-			blog_obj = Blog(title=data.title, content=data.content, author_id=data.user_id)
+			read_time = math.ceil(countWords(data.content)/app_config.AVG_WPM)
+			blog_obj = Blog(title=data.title, content=data.content, author_id=data.user_id, read_time=read_time)
 			db.add(blog_obj)
 			db.flush()
-			category_names = []
+			categories = []
 			for category_id in data.categories:
 				category_name = db.query(BlogCategory).get(category_id).name
-				category_names.append(category_name)
+				categories.append({
+					"id": category_id,
+					"name": category_name
+				})
 				blog_map_category_obj = BlogMapCategory(blog_id=blog_obj.id, category_id=category_id)
 				db.add(blog_map_category_obj)
 			db.flush()
@@ -198,8 +204,10 @@ class User(Base):
 				"id": blog_obj.id,
 				"title": blog_obj.title,
 				"content": blog_obj.content,
-				"categories": category_names,
+				"read_time": blog_obj.read_time,
+				"categories": categories,
 				"createdOn": blog_obj.created_on,
+				"author_id": blog_obj.author_id
 			}
 			await es_submit_blog_data(data)
 			# End
@@ -218,7 +226,9 @@ class User(Base):
 			if data.title and blog_obj.title!=data.title:
 				blog_obj.title = data.title
 			if data.content and blog_obj.content!=data.content:
+				new_read_time = math.ceil(countWords(data.content)/app_config.AVG_WPM)
 				blog_obj.content = data.content
+				blog_obj.read_time = new_read_time
 			for category_data in data.categories:
 				category_id, action = category_data["id"], category_data["action"]
 				if action==CategoryAction.add and not(db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id, category_id=category_id).first()):
@@ -230,20 +240,25 @@ class User(Base):
 						db.delete(blog_map_category_obj)
 			db.flush()
 
-			category_names = []
+			categories = []
 			blog_map_category_objs = db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id).all()
 			for blog_map_category_obj in blog_map_category_objs:
 				category_id = blog_map_category_obj.category_id
 				category_name = db.query(BlogCategory).get(category_id).name
-				category_names.append(category_name)
+				categories.append({
+					"id": category_id,
+					"name": category_name
+				})
 
 			# Submit Data to Elastic Search
 			data = {
 				"id": blog_obj.id,
 				"title": blog_obj.title,
 				"content": blog_obj.content,
-				"categories": category_names,
+				"read_time": blog_obj.read_time,
+				"categories": categories,
 				"createdOn": blog_obj.created_on,
+				"author_id": blog_obj.author_id
 			}
 			await es_update_blog_data(data)
 			# End
@@ -269,6 +284,62 @@ class User(Base):
 			}
 			await es_delete_blog_data(blog_obj.id)
 			# End
+			db.commit()
+			return Result(status=True)
+		except ValidationError as error:
+			return Result(status=False, error_msg=get_error_messages(error))
+
+	def like_blog(self, data:dict, db):
+		try:
+			data = BlogLikeUnlikeSchema(**data)
+			bloge_like_obj = BlogLike(user_id=self.id, blog_id=data.blog_id)
+			db.add(bloge_like_obj)
+			db.commit()
+			db.refresh(bloge_like_obj)
+			return Result(status=True, data=bloge_like_obj)
+		except ValidationError as error:
+			return Result(status=False, error_msg=get_error_messages(error))
+	
+	def unlike_blog(self, data:dict, db):
+		try:
+			data = BlogLikeUnlikeSchema(**data)
+			bloge_like_obj = db.query(BlogLike).filter_by(user_id=self.id, blog_id=data.blog_id).first()
+			if bloge_like_obj:
+				db.delete(bloge_like_obj)
+				db.commit()
+			return Result(status=True)
+		except ValidationError as error:
+			return Result(status=False, error_msg=get_error_messages(error))
+
+	def create_blog_comment(self, data:dict, db):
+		try:
+			data = CreateBlogCommentSchema(**data)
+			blog_comment_obj = BlogComment(user_id=self.id, blog_id=data.blog_id, comment=data.comment)
+			db.add(blog_comment_obj)
+			db.commit()
+			db.refresh(blog_comment_obj)
+			return Result(status=True, data=blog_comment_obj)
+		except ValidationError as error:
+			return Result(status=False, error_msg=get_error_messages(error))
+
+	def update_blog_comment(self, data:dict, db):
+		data.update({"user_id": self.id})
+		try:
+			data = UpdateBlogCommentSchema(**data)
+			blog_comment_obj = db.query(BlogComment).get(data.comment_id)
+			blog_comment_obj.comment = data.comment
+			db.commit()
+			db.refresh(blog_comment_obj)
+			return Result(status=True, data=blog_comment_obj)
+		except ValidationError as error:
+			return Result(status=False, error_msg=get_error_messages(error))
+
+	def delete_blog_comment(self, data:dict, db):
+		data.update({"user_id": self.id})
+		try:
+			data = DeleteBlogCommentSchema(**data)
+			blog_comment_obj = db.query(BlogComment).get(data.comment_id)
+			db.delete(blog_comment_obj)
 			db.commit()
 			return Result(status=True)
 		except ValidationError as error:

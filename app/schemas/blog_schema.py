@@ -147,3 +147,87 @@ class BlogSearchSchema(BaseModel):
 			if not category_obj:
 				raise ValueError('Invalid category_id {}'.format(category_id))
 		return value
+
+
+class BlogLikeUnlikeSchema(BaseModel):
+
+	blog_id: int
+
+	@validator('blog_id')
+	def valid_blog_id(cls, value, values):
+		db = SessionLocal()
+		blog_obj = db.query(models.Blog).get(value)
+		if not blog_obj:
+			raise ValueError('blog does not exists')
+		return value
+
+
+class CreateBlogCommentSchema(BaseModel):
+
+	blog_id: int
+	comment: str
+
+	@validator('blog_id')
+	def valid_blog_id(cls, value, values):
+		db = SessionLocal()
+		blog_obj = db.query(models.Blog).get(value)
+		if not blog_obj:
+			raise ValueError('blog does not exists')
+		return value
+
+
+class UpdateBlogCommentSchema(BaseModel):
+
+	user_id: int
+	blog_id: int
+	comment: str
+	comment_id: int
+
+	@validator('blog_id')
+	def valid_blog_id(cls, value, values):
+		db = SessionLocal()
+		blog_obj = db.query(models.Blog).get(value)
+		if not blog_obj:
+			raise ValueError('blog does not exists')
+		return value
+
+
+	@validator('comment_id')
+	def valid_comment_id(cls, value, values):
+		db = SessionLocal()
+		comment_obj = db.query(models.BlogComment).get(value)
+		if not comment_obj:
+			raise ValueError('comment does not exists')
+		if comment_obj.blog_id!=values["blog_id"]:
+			raise ValueError('this comment is not belongs to mentioned blog')
+		if comment_obj.user_id!=values["user_id"]:
+			raise ValueError('you dont have permission to edit this comment')
+		return value
+
+
+class DeleteBlogCommentSchema(BaseModel):
+
+	user_id: int
+	blog_id: int
+	comment_id: int
+
+	@validator('blog_id')
+	def valid_blog_id(cls, value, values):
+		db = SessionLocal()
+		blog_obj = db.query(models.Blog).get(value)
+		if not blog_obj:
+			raise ValueError('blog does not exists')
+		return value
+
+
+	@validator('comment_id')
+	def valid_comment_id(cls, value, values):
+		db = SessionLocal()
+		comment_obj = db.query(models.BlogComment).get(value)
+		if not comment_obj:
+			raise ValueError('comment does not exists')
+		if comment_obj.blog_id!=values["blog_id"]:
+			raise ValueError('this comment is not belongs to mentioned blog')
+		if comment_obj.user_id!=values["user_id"]:
+			raise ValueError('you dont have permission to delete this comment')
+		return value

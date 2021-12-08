@@ -17,3 +17,30 @@ def get_error_messages(error):
 			msg = msg[0].upper() + msg[1:]
 			error_msg.append(msg)
 	return error_msg
+
+
+def countWords(string):
+	OUT = 0
+	IN = 1
+	state = OUT
+	wc = 0
+ 
+	# Scan all characters one by one
+	for i in range(len(string)):
+ 
+		# If next character is a separator,
+		# set the state as OUT
+		if (string[i] == ' ' or string[i] == '\n' or
+			string[i] == '\t'):
+			state = OUT
+ 
+		# If next character is not a word
+		# separator and state is OUT, then
+		# set the state as IN and increment
+		# word count
+		elif state == OUT:
+			state = IN
+			wc += 1
+ 
+	# Return the number of words
+	return wc
