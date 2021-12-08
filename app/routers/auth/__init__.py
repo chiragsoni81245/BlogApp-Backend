@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.sql.sqltypes import JSON
 from ...database import *
-from ...models import *
 from .utilities import *
-from ...schemas.auth_schema import *
+from ...schemas import auth_schema 
 from ...decorators import *
 from pydantic import ValidationError
+from ... import models
 
 router = APIRouter()
 
@@ -22,12 +22,12 @@ def create_clients(request: Request, db : Session = Depends(get_db) ):
 async def login(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()
 	try:
-		data = LoginDataSchema(**data)
-		client = db.query(AuthorizationClient).filter_by(client_id=data.client_id).first()
+		data = auth_schema.LoginDataSchema(**data)
+		client = db.query(models.AuthorizationClient).filter_by(client_id=data.client_id).first()
 		if client:
-			user_obj = db.query(User).filter_by(email=data.email).first()
+			user_obj = db.query(models.User).filter_by(email=data.email).first()
 			if user_obj and user_obj.check_password(data.password) and user_obj.login_permit:
-				token_family_obj = TokenFamily(user_id=user_obj.id)
+				token_family_obj = models.TokenFamily(user_id=user_obj.id)
 				db.add(token_family_obj)
 				db.commit()
 				return { "result": { "code": get_token_code(client, token_family_obj.id, user_obj, db) } }
@@ -46,14 +46,14 @@ async def login(request: Request, db: Session = Depends(get_db)):
 async def get_login_token(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()
 	try:
-		data = GetLoginTokenSchema(**data)
+		data = auth_schema.GetLoginTokenSchema(**data)
 		payload = verify_token_code(data.code, db)
 		if payload:
-			token_code_obj = db.query(LoginToken).filter_by(token=data.code).first()
+			token_code_obj = db.query(models.LoginToken).filter_by(token=data.code).first()
 		if payload and token_code_obj.is_valid:
-			client_secret = db.query(AuthorizationClient).filter_by(client_id = payload["client_id"]).first().client_secret
+			client_secret = db.query(models.AuthorizationClient).filter_by(client_id = payload["client_id"]).first().client_secret
 			if client_secret == data.client_secret:
-				user_obj = db.query(User).filter_by(id = payload['user_id']).first()
+				user_obj = db.query(models.User).filter_by(id = payload['user_id']).first()
 				login_tokens = get_login_tokens(user_obj, token_code_obj.token_family_id, db)
 				
 				db.delete(token_code_obj)
@@ -98,10 +98,10 @@ async def refresh_login_tokens(request: Request, db: Session = Depends(get_db)):
 async def logout_user(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()
 	try:
-		data = LogoutDataSchema(**data)
-		refresh_token_obj = db.query(LoginToken).filter(LoginToken.token_type == "refresh", LoginToken.token == data.refresh_token).first()
+		data = auth_schema.LogoutDataSchema(**data)
+		refresh_token_obj = db.query(models.LoginToken).filter(models.LoginToken.token_type == "refresh", models.LoginToken.token == data.refresh_token).first()
 		if refresh_token_obj and refresh_token_obj.is_valid:
-			token_family_obj = db.query(TokenFamily).get(refresh_token_obj.token_family_id) 
+			token_family_obj = db.query(models.TokenFamily).get(refresh_token_obj.token_family_id) 
 			db.delete(token_family_obj)
 			db.commit()	
 			return { "status": "success" }
