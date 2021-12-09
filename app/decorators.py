@@ -1,4 +1,4 @@
-from app.models import *
+from app import models
 from functools import wraps
 from fastapi.responses import JSONResponse, RedirectResponse
 from app.routers.auth.utilities import *
@@ -13,7 +13,7 @@ def is_authorized(func):
 			access_token = request.headers['Authorization']
 			payload = verify_access_token(access_token, db)
 			if payload:
-				user_obj = db.query(User).get(payload['user_id'])
+				user_obj = db.query(models.User).get(payload['user_id'])
 				setattr(request, "current_user", user_obj) 
 				if request.method == "GET":
 					return func(*args, **kwargs)
@@ -42,7 +42,7 @@ def user_have_roles(roles: list, any: bool = False):
 				access_token = request.headers['Authorization']
 				payload = verify_access_token(access_token, db)
 				if payload:
-					user_obj = db.query(User).get(payload['user_id'])
+					user_obj = db.query(models.User).get(payload['user_id'])
 					setattr(request, "current_user", user_obj) 
 					user_roles = user_obj.get_roles(db)
 					if any:

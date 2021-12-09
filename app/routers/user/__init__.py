@@ -2,9 +2,9 @@ from os import path
 from fastapi import APIRouter, Request, Depends
 from sqlalchemy.sql.sqltypes import JSON
 from ...database import *
-from ...models import *
 from ...schemas.auth_schema import *
-from ...decorators import *
+from ...decorators import is_authorized
+from ... import models
 from pydantic import ValidationError
 from fastapi.encoders import jsonable_encoder
 import time
@@ -18,19 +18,19 @@ from .validators import *
 @is_authorized
 def get_user_details(request: Request, db: Session = Depends(get_db)):
 	user_details = db.query(
-		User.id,
-		User.email,
-		UserDetail.first_name,
-		UserDetail.last_name,
-		UserDetail.contact_no,
-		UserDetail.date_of_birth.label('dob'),
-		UserDetail.image
-	).join(UserDetail, UserDetail.user_id==User.id, isouter=True).filter( User.id==request.current_user.id ).first()
+		models.User.id,
+		models.User.email,
+		models.UserDetail.first_name,
+		models.UserDetail.last_name,
+		models.UserDetail.contact_no,
+		models.UserDetail.date_of_birth.label('dob'),
+		models.UserDetail.image
+	).join(models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True).filter( models.User.id==request.current_user.id ).first()
 
 	user_details = jsonable_encoder(user_details)
 	user_details["image"] = request.url_for('static', path="user_images/{}".format(user_details["image"]))
-	user_details["followers_count"] = db.query(Followers).filter_by(following_id=user_details["id"]).count()
-	user_details["following_count"] = db.query(Followers).filter_by(follower_id=user_details["id"]).count()
+	user_details["followers_count"] = db.query(models.Followers).filter_by(following_id=user_details["id"]).count()
+	user_details["following_count"] = db.query(models.Followers).filter_by(follower_id=user_details["id"]).count()
 		
 	return { "result": user_details }
 
@@ -38,7 +38,7 @@ def get_user_details(request: Request, db: Session = Depends(get_db)):
 @router.post("/")
 async def create_user(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()
-	result = User.create(data, db)
+	result = models.User.create(data, db)
 	if result.status:
 		return JSONResponse(
 			content={"status": "success"},
@@ -71,7 +71,7 @@ async def update_user(request: Request, db: Session = Depends(get_db)):
 @router.get("/follow/{user_id}")
 @is_authorized
 def follow_user(request: Request, user_id:int = None, db: Session = Depends(get_db)):
-	following_user_obj = db.query(User).get(user_id)
+	following_user_obj = db.query(models.User).get(user_id)
 	if not following_user_obj:
 		return JSONResponse(
 			content={"error_msg": "User with id {} not found".format(user_id)},
@@ -93,7 +93,7 @@ def follow_user(request: Request, user_id:int = None, db: Session = Depends(get_
 @router.get("/unfollow/{user_id}")
 @is_authorized
 def unfollow_user(request: Request, user_id:int = None, db: Session = Depends(get_db)):
-	following_user_obj = db.query(User).get(user_id)
+	following_user_obj = db.query(models.User).get(user_id)
 	if not following_user_obj:
 		return JSONResponse(
 			content={"error_msg": "User with id {} not found".format(user_id)},
@@ -115,7 +115,7 @@ def unfollow_user(request: Request, user_id:int = None, db: Session = Depends(ge
 @router.get("/followers")
 @is_authorized
 def get_followers(request: Request, page:int =1, page_size:int = 5, db: Session = Depends(get_db)):
-	followers = db.query(Followers.follower_id).filter_by(
+	followers = db.query(models.Followers.follower_id).filter_by(
 		following_id=request.current_user.id
 	)
 	total_followers = followers.count()
@@ -123,14 +123,14 @@ def get_followers(request: Request, page:int =1, page_size:int = 5, db: Session 
 	final_followers = []
 	for follower in followers:
 		follower_obj = db.query(
-			User.id,
-			User.email,
-			UserDetail.first_name,
-			UserDetail.last_name,
-			UserDetail.date_of_birth.label('dob'),
-			UserDetail.image
-		).join(UserDetail, UserDetail.user_id==User.id, isouter=True).filter( 
-			User.id==follower[0] 
+			models.User.id,
+			models.User.email,
+			models.UserDetail.first_name,
+			models.UserDetail.last_name,
+			models.UserDetail.date_of_birth.label('dob'),
+			models.UserDetail.image
+		).join(models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True).filter( 
+			models.User.id==follower[0] 
 		).first()
 
 		follower_obj = jsonable_encoder(follower_obj)
@@ -151,7 +151,7 @@ def get_followers(request: Request, page:int =1, page_size:int = 5, db: Session 
 @router.get("/following")
 @is_authorized
 def get_following(request: Request, page:int =1, page_size:int = 5, db: Session = Depends(get_db)):
-	followers = db.query(Followers.following_id).filter_by(
+	followers = db.query(models.Followers.following_id).filter_by(
 		follower_id=request.current_user.id
 	)
 	total_following = followers.count()
@@ -159,14 +159,14 @@ def get_following(request: Request, page:int =1, page_size:int = 5, db: Session 
 	final_following = []
 	for follower in following:
 		follower_obj = db.query(
-			User.id,
-			User.email,
-			UserDetail.first_name,
-			UserDetail.last_name,
-			UserDetail.date_of_birth.label('dob'),
-			UserDetail.image
-		).join(UserDetail, UserDetail.user_id==User.id, isouter=True).filter( 
-			User.id==follower[0] 
+			models.User.id,
+			models.User.email,
+			models.UserDetail.first_name,
+			models.UserDetail.last_name,
+			models.UserDetail.date_of_birth.label('dob'),
+			models.UserDetail.image
+		).join(models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True).filter( 
+			models.User.id==follower[0] 
 		).first()
 
 		follower_obj = jsonable_encoder(follower_obj)

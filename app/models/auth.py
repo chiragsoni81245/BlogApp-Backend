@@ -23,6 +23,8 @@ from pyotp import TOTP
 import aiofiles
 from elasticsearch_client import es_submit_blog_data, es_update_blog_data, es_delete_blog_data
 import math
+import base64
+
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -94,10 +96,10 @@ class User(Base):
 				for token_family in token_families:
 					db.delete(token_family)
 			if data.image:
-				if not os.path.isdir(os.getcwd()+"/user_images"):
-					os.mkdir(os.getcwd()+"/user_images")
-				with open(os.getcwd()+"/user_images/{}.jpg".format(user_obj.id), "w") as f:
-					f.write(data.image.read())
+				if not os.path.isdir(os.getcwd()+"/static/user_images"):
+					os.makedirs(os.getcwd()+"/static/user_images")
+				with open(os.getcwd()+"/static/user_images/{}.jpg".format(user_obj.id), "w") as f:
+					f.write(base64.decodebytes(data.image))
 				user_detail_obj.image = "{}.jpg".format(user_obj.id)
 
 			check_list = [ 

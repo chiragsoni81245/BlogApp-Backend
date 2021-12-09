@@ -60,7 +60,7 @@ class UserUpdateSchema(BaseModel):
 	last_name: Optional[str]
 	contact_no: Optional[str]
 	dob: Optional[date]
-	image : Optional[UploadFile] = None
+	image : Optional[str] = None
 
 	@validator('user_id')
 	def valid_user_id(cls, value):
@@ -100,13 +100,6 @@ class UserUpdateSchema(BaseModel):
 		if user_detail_obj:
 			if user_detail_obj.user_id!=values["user_id"]:
 				raise ValueError('This contact number is already exists')
-		return value
-
-	@validator('image')
-	def validate_image(cls,value):
-		if value:
-			valid_content_types = ["image/jpeg", "image/png"]
-			assert value.content_type in valid_content_types, "Only .png, jpg, .jpeg File extensions allowed."
 		return value
 
 class ForgetPasswordSchema(BaseModel):
