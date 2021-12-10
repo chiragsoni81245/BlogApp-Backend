@@ -31,7 +31,7 @@ class BlogCreateSchema(BaseModel):
 	title: str
 	user_id: int
 	content: str
-	categories: List[int]
+	categories: List[str]
 
 	@validator('user_id')
 	def valid_user_id(cls, value):
@@ -41,14 +41,14 @@ class BlogCreateSchema(BaseModel):
 			raise ValueError('Invalid user')
 		return value
 
-	@validator('categories')
-	def valid_categories(cls, value):
-		db = SessionLocal()
-		for category_id in value:
-			category_obj = db.query(models.BlogCategory).get(category_id)
-			if not category_obj:
-				raise ValueError('Invalid category_id {}'.format(category_id))
-		return value
+	# @validator('categories')
+	# def valid_categories(cls, value):
+	# 	db = SessionLocal()
+	# 	for category_id in value:
+	# 		category_obj = db.query(models.BlogCategory).get(category_id)
+	# 		if not category_obj:
+	# 			raise ValueError('Invalid category_id {}'.format(category_id))
+	# 	return value
 
 
 
@@ -67,7 +67,7 @@ class BlogUpdateSchema(BaseModel):
 	blog_id: int
 	title: Optional[str]
 	content: Optional[str]
-	categories: Optional[List[CategoryUpdate]] = []
+	categories: Optional[List[str]] = []
 
 	@validator('user_id')
 	def valid_user_id(cls, value):
@@ -87,15 +87,15 @@ class BlogUpdateSchema(BaseModel):
 			raise ValueError("You don't have permission to edit this blog")
 		return value
 
-	@validator('categories')
-	def valid_categories(cls, value):
-		db = SessionLocal()
-		for data in value:
-			category_id, action = data["id"], data["action"]
-			category_obj = db.query(models.BlogCategory).get(category_id)
-			if not category_obj:
-				raise ValueError('Invalid category_id {}'.format(category_id))
-		return value
+	# @validator('categories')
+	# def valid_categories(cls, value):
+	# 	db = SessionLocal()
+	# 	for data in value:
+	# 		category_id, action = data["id"], data["action"]
+	# 		category_obj = db.query(models.BlogCategory).get(category_id)
+	# 		if not category_obj:
+	# 			raise ValueError('Invalid category_id {}'.format(category_id))
+	# 	return value
 
 
 class BlogDeleteSchema(BaseModel):
@@ -125,7 +125,7 @@ class BlogDeleteSchema(BaseModel):
 class BlogSearchSchema(BaseModel):
 
 	text: Optional[str]
-	categories: Optional[List[int]] = []
+	categories: Optional[List[str]] = []
 	page: int
 	page_size: int
 
@@ -139,14 +139,14 @@ class BlogSearchSchema(BaseModel):
 		if value<=0:
 			raise ValueError('Invalid page size')
 
-	@validator('categories')
-	def validate_categories(cls, value):
-		db = SessionLocal()
-		for category_id in value:
-			category_obj = db.query(models.BlogCategory).get(category_id)
-			if not category_obj:
-				raise ValueError('Invalid category_id {}'.format(category_id))
-		return value
+	# @validator('categories')
+	# def validate_categories(cls, value):
+	# 	db = SessionLocal()
+	# 	for category_id in value:
+	# 		category_obj = db.query(models.BlogCategory).get(category_id)
+	# 		if not category_obj:
+	# 			raise ValueError('Invalid category_id {}'.format(category_id))
+	# 	return value
 
 
 class BlogLikeUnlikeSchema(BaseModel):

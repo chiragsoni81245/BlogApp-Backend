@@ -191,12 +191,14 @@ class User(Base):
 			db.add(blog_obj)
 			db.flush()
 			categories = []
-			for category_id in data.categories:
-				category_name = db.query(BlogCategory).get(category_id).name
-				categories.append({
-					"id": category_id,
-					"name": category_name
-				})
+			for category in data.categories:
+				category_obj = db.query(BlogCategory).filter_by(name=category).first()
+				if not category_obj:
+					category_obj = BlogCategory(name=category)
+					db.add(category_obj)
+					db.flush()
+				category_id = category_obj.id
+				categories.append(category)
 				blog_map_category_obj = BlogMapCategory(blog_id=blog_obj.id, category_id=category_id)
 				db.add(blog_map_category_obj)
 			db.flush()
@@ -231,27 +233,24 @@ class User(Base):
 				new_read_time = math.ceil(countWords(data.content)/app_config.AVG_WPM)
 				blog_obj.content = data.content
 				blog_obj.read_time = new_read_time
-			for category_data in data.categories:
-				category_id, action = category_data["id"], category_data["action"]
-				if action==CategoryAction.add and not(db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id, category_id=category_id).first()):
-					blog_map_category_obj = BlogMapCategory(blog_id=blog_obj.id, category_id=category_id)
-					db.add(blog_map_category_obj)
-				elif action==CategoryAction.delete:
-					blog_map_category_obj = db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id, category_id=category_id).first()
-					if blog_map_category_obj:
-						db.delete(blog_map_category_obj)
+			
+			prev_categories = db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id).all()
+			for prev_category in prev_categories:
+				db.delete(prev_category)
 			db.flush()
-
 			categories = []
-			blog_map_category_objs = db.query(BlogMapCategory).filter_by(blog_id=blog_obj.id).all()
-			for blog_map_category_obj in blog_map_category_objs:
-				category_id = blog_map_category_obj.category_id
-				category_name = db.query(BlogCategory).get(category_id).name
-				categories.append({
-					"id": category_id,
-					"name": category_name
-				})
+			for category in data.categories:
+				category_obj = db.query(BlogCategory).filter_by(name=category).first()
+				if not category_obj:
+					category_obj = BlogCategory(name=category)
+					db.add(category_obj)
+					db.flush()
+				category_id = category_obj.id
 
+				category_blog_map_obj = BlogMapCategory(blog_id=blog_obj.id, category_id=category_id)
+				db.add(category_blog_map_obj)
+				categories.append(category)
+				
 			# Submit Data to Elastic Search
 			data = {
 				"id": blog_obj.id,
@@ -278,12 +277,6 @@ class User(Base):
 			blog_obj = db.query(Blog).get(data.blog_id)
 			db.delete(blog_obj)
 			# Submit Data to Elastic Search
-			data = {
-				"id": blog_obj.id,
-				"title": blog_obj.title,
-				"content": blog_obj.content,
-				"createdOn": blog_obj.created_on,
-			}
 			await es_delete_blog_data(blog_obj.id)
 			# End
 			db.commit()

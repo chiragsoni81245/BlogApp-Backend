@@ -48,7 +48,7 @@ def get_all_blogs(request: Request, page:int =1, page_size:int = 5, db:Session =
 				Blog.created_on.desc() 
 			)
 	total_blogs = blogs.count()
-	blogs = blog.offset((page-1)*page_size).limit(page_size)
+	blogs = blog.offset((page-1)*page_size).limit(page_size).all()
 			
 	return { 
 		"metadata":{
@@ -60,14 +60,14 @@ def get_all_blogs(request: Request, page:int =1, page_size:int = 5, db:Session =
 	}
 
 
-@router.get('/recommended')
+@router.post('/recommended')
 @is_authorized
-def get_recommended_blogs(request: Request, page:int =1, page_size:int = 5, db:Session = Depends(get_db)):
+async def get_recommended_blogs(request: Request, page:int =1, page_size:int = 10, db:Session = Depends(get_db)):
 	total_likes_by_this_user = db.query(BlogLike.id).filter_by(user_id=request.current_user.id).count()
-	if total_likes_by_this_user>1:
-		response = content_base_recommander.recommend(db, request.current_user, page, page_size)
+	if total_likes_by_this_user>=1:
+		response = await content_base_recommander.recommend(db, request.current_user, page, page_size)
 	else:
-		response = popularity_base_recommander.recommend(db, page, page_size)
+		response = popularity_base_recommander.recommend(db, request.current_user, page, page_size)
 	
 	total_blogs = response["total_results"]
 	blogs = response["results"]
@@ -78,7 +78,54 @@ def get_recommended_blogs(request: Request, page:int =1, page_size:int = 5, db:S
 			"page_size": page_size
 		},
 		"total_results": total_blogs,
-		"result": jsonable_encoder(blogs)
+		"results": jsonable_encoder(blogs)
+	}
+
+
+@router.get('/my_feed')
+@is_authorized
+def get_my_feed(request: Request, page:int =1, page_size:int = 20, db:Session = Depends(get_db)):
+	followings = db.query(models.Followers.following_id).filter_by(follower_id=request.current_user.id).all()
+	followings = list(map(lambda x: x[0], followings))
+
+	blogs = db.query(models.Blog).filter(
+		models.Blog.author_id.in_(followings)
+	).order_by( models.Blog.created_on.desc() )
+	total_blogs = blogs.count()
+	blogs = jsonable_encoder(blogs.offset((page-1)*page_size).limit(page_size).all())
+
+	for i in range(len(blogs)):
+		author_id = blogs[i].pop("author_id")
+		blogs[i]["author"] = jsonable_encoder(
+			db.query(
+				models.User.id, 
+				models.User.email, 
+				models.UserDetail.contact_no,
+				models.UserDetail.first_name,
+				models.UserDetail.last_name,
+				models.UserDetail.image,
+			).join(
+				models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True
+			).filter(models.User.id==author_id).first()
+		)
+
+		first_name, last_name = blogs[i]["author"].pop("first_name"), blogs[i]["author"].pop("last_name")
+		if last_name:
+			name = "{} {}".format(first_name, last_name)
+		else:
+			name = first_name
+
+		blogs[i]["author"]["name"] = name
+		blogs[i]["author"]["image"] = request.url_for('static', path="user_images/{}".format(blogs[i]["author"]["image"]))
+
+
+	return { 
+		"metadata":{
+			"page": page,
+			"page_size": page_size
+		},
+		"total_results": total_blogs,
+		"results": blogs
 	}
 
 
@@ -126,6 +173,20 @@ def get_blog(request: Request, blog_id:int = None, db:Session = Depends(get_db))
 			).filter(models.User.id==author_id).first()
 		)
 
+		categories = []
+		for category in db.query(models.BlogCategory.name).join(
+			models.BlogMapCategory,
+			models.BlogMapCategory.category_id==models.BlogCategory.id, isouter=True
+		).filter(models.BlogMapCategory.blog_id==blog["id"]).all():
+			categories.append(category.name)
+
+		blog["categories"] = categories
+
+		blog["is_liked"] = db.query(models.BlogLike).filter_by(
+			user_id=request.current_user.id, blog_id=blog["id"]
+		).first()!=None
+
+
 		first_name, last_name = blog["author"].pop("first_name"), blog["author"].pop("last_name")
 		if last_name:
 			name = "{} {}".format(first_name, last_name)
@@ -134,6 +195,9 @@ def get_blog(request: Request, blog_id:int = None, db:Session = Depends(get_db))
 		
 		blog["author"]["name"] = name
 		blog["author"]["image"] = request.url_for('static', path="user_images/{}".format(blog["author"]["image"]))
+		blog["author"]["is_following"] = db.query(models.Followers).filter_by(
+			follower_id=request.current_user.id, following_id=blog["author"]["id"]
+		).first()!=None
 
 		# Add a view entry in BlogView Table
 		try:
@@ -154,51 +218,6 @@ def get_blog(request: Request, blog_id:int = None, db:Session = Depends(get_db))
 		)
 
 
-@router.get('/my_feed')
-@is_authorized
-def get_my_feed(request: Request, page:int =1, page_size:int = 5, db:Session = Depends(get_db)):
-	followings = db.query(models.Followers.following_id).filter_by(follower_id=request.current_user.id).all()
-	followings = list(map(lambda x: x[0], followings))
-
-	blogs = db.query(models.Blog).filter(
-		models.Blog.author_id.in_(followings)
-	).order_by( models.Blog.created_on.desc() )
-	total_blogs = blogs.count()
-	blogs = jsonable_encoder(blogs.offset((page-1)*page_size).limit(page_size))
-
-	for i in range(len(blogs)):
-		author_id = blogs[i].pop("author_id")
-		blogs[i]["author"] = jsonable_encoder(
-			db.query(
-				models.User.id, models.User.email, 
-				models.UserDetail.contact_no,
-				models.UserDetail.first_name,
-				models.UserDetail.last_name,
-				models.UserDetail.image,
-			).join(
-				models.UserDetail, models.UserDetail.user_id==models.User.id
-			).filter(models.User.id==author_id).first()
-		)
-
-		first_name, last_name = blogs[i]["author"].pop("first_name"), blogs[i]["author"].pop("last_name")
-		if last_name:
-			name = "{} {}".format(first_name, last_name)
-		else:
-			name = first_name
-
-		blogs[i]["author"]["name"] = name
-		blogs[i]["author"]["image"] = request.url_for('static', path="user_images/{}".format(blogs[i]["author"]["image"]))
-
-
-	return { 
-		"metadata":{
-			"page": page,
-			"page_size": page_size
-		},
-		"total_results": total_blogs,
-		"result": blogs
-	}
-
 
 @router.post('/search')
 @is_authorized
@@ -207,10 +226,6 @@ async def search(request: Request, page:int =1, page_size:int = 10, db:Session =
 	try:
 		data = BlogSearchSchema(**data, page=page, page_size=page_size)
 		# Implement Elastic Search
-		categories = []
-		for categorie in db.query(models.BlogCategory).filter( models.BlogCategory.id.in_(data.categories) ).all():
-			categories.append(categorie.name)
-
 		should_search = []
 		if data.text:
 			should_search.append({
@@ -229,19 +244,18 @@ async def search(request: Request, page:int =1, page_size:int = 10, db:Session =
 					}
 				},
 			})
-		if data.categories:
-			for i in categories:
-				should_search.append(
-					{ 
-						"match": { 
-							"categories.name": {
-								"query": i,
-								"boost": 6
-							}, 
+		for i in data.categories:
+			should_search.append(
+				{ 
+					"match": { 
+						"categories": {
+							"query": i,
+							"boost": 6
 						}, 
-					}
-				)
-
+					}, 
+				}
+			)
+		print(should_search)
 		response = await es_search_blogs({
 			"from": str((page-1)*page_size),
 			"size": str(page_size),

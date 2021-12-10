@@ -4,9 +4,9 @@ import os
 class app_config():
 
     if os.environ.get("ENVIRONMENT"):
-        ACCESS_TOKEN_EXPIRY_TIME = 36000
+        ACCESS_TOKEN_EXPIRY_TIME = 3672000
         ACCESS_TOKEN_SECRET_KEY = '1sxfcghjkmjiuihjv2wsdgfh09ij23456789ihfcxzaq2346ujnbvcxzswe456324567890poiuhgfdcszxcvbjkl.,mnbvcxs'
-        REFRESH_TOKEN_EXPIRY_TIME = 36000
+        REFRESH_TOKEN_EXPIRY_TIME = 3672000
         REFRESH_TOKEN_SECRET_KEY = 'h098765ewqazsxvbj98trewwsc0oiuhgfvewdgpigheew3ertui09876543wqaZxvjmk nbcfdesryuijkn bvcxsdertyuhjb'
         CLIENTS:list = [ 'Application' ]
         TOKEN_CODE_EXPIRY_TIME = 120

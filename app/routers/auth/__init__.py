@@ -94,6 +94,12 @@ async def refresh_login_tokens(request: Request, db: Session = Depends(get_db)):
 		)
 
 
+@router.get("/tokens/access/is_valid")
+@is_authorized
+def check_validity_of_access_token(request: Request, db: Session = Depends(get_db)):
+	return { 'result' : True }
+
+
 @router.post("/logout")
 async def logout_user(request: Request, db: Session = Depends(get_db)):
 	data = await request.json()

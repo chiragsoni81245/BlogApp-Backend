@@ -10,12 +10,7 @@ es.indices.create(index="blogs", ignore=400, mappings={
 		"title": {"type": "string", "index": True, "analyzer": "english"},
 		"content": {"type": "string", "index": True, "analyzer": "english"},
 		"read_time": {"type": "integer", "index": False},
-		"categories": [{
-			"properties": {
-				"id": {"type": "integer", "index": False},
-				"name": {"type": "string", "index": True}
-			}
-		}],
+		"categories": {"type": "string", "index": True, "analyzer": "english"},
 		"createdOn": {"type": "datetime", "index": False},
 		"author_id": {"type": "integer", "index": False},
 	}

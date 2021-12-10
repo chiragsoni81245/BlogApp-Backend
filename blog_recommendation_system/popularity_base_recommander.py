@@ -3,13 +3,15 @@ from fastapi.encoders import jsonable_encoder
 from app import models
 from sqlalchemy.sql import func
 
+from app.models.blog import BlogView
+
 
 class PopularityBaseRecommander:
 
     def __init__(self):
         pass
 
-    def recommend(self, db, page:int, page_size:int):
+    def recommend(self, db, user, page:int, page_size:int):
         blog_like = db.query( 
                 models.BlogLike.blog_id.label('blog_id'),  func.count(models.BlogLike.user_id).label('like_count')
         ).group_by( models.BlogLike.blog_id ).subquery()
@@ -23,14 +25,20 @@ class PopularityBaseRecommander:
         blogs = db.query(
             models.Blog.id,
             models.Blog.title,
-            models.Blog.conrent,
-            models.Blog.read_time
+            models.Blog.content,
+            models.Blog.read_time,
+            models.Blog.created_on.label("createdOn")
         ).join(
             blog_view, blog_view.columns.get("blog_id")==models.Blog.id, isouter=True
         ).join(
             blog_like, blog_like.columns.get("blog_id")==models.Blog.id, isouter=True
         ).join(
             blog_comment, blog_comment.columns.get("blog_id")==models.Blog.id, isouter=True
+        ).filter(
+            models.Blog.id.notin_(list(map(
+                lambda x: x.blog_id, 
+                db.query(BlogView.blog_id).filter_by(user_id=user.id).all()
+            )))   
         ).order_by(
             blog_view.columns.get("view_count").desc(),
             blog_like.columns.get("like_count").desc(),
@@ -38,11 +46,11 @@ class PopularityBaseRecommander:
         )
 
         total_blogs = blogs.count()
-        blogs = blogs.offset((page-1)*page_size).limit(page_size)
+        blogs = blogs.offset((page-1)*page_size).limit(page_size).all()
         blogs = jsonable_encoder(blogs)
         for i in range(len(blogs)):
             categories = list(map(
-                lambda x: {"id": x.id, "name":x.name},
+                lambda x: x.name,
                 db.query(
                     models.BlogCategory.id,
                     models.BlogCategory.name

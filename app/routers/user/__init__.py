@@ -119,7 +119,7 @@ def get_followers(request: Request, page:int =1, page_size:int = 5, db: Session 
 		following_id=request.current_user.id
 	)
 	total_followers = followers.count()
-	followers = jsonable_encoder(followers.offset((page-1)*page_size).limit(page_size))
+	followers = jsonable_encoder(followers.offset((page-1)*page_size).limit(page_size).all())
 	final_followers = []
 	for follower in followers:
 		follower_obj = db.query(
@@ -155,7 +155,7 @@ def get_following(request: Request, page:int =1, page_size:int = 5, db: Session 
 		follower_id=request.current_user.id
 	)
 	total_following = followers.count()
-	following = jsonable_encoder(followers.offset((page-1)*page_size).limit(page_size))
+	following = jsonable_encoder(followers.offset((page-1)*page_size).limit(page_size).all())
 	final_following = []
 	for follower in following:
 		follower_obj = db.query(
