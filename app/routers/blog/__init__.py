@@ -66,11 +66,14 @@ async def get_recommended_blogs(request: Request, page:int =1, page_size:int = 1
 	total_likes_by_this_user = db.query(BlogLike.id).filter_by(user_id=request.current_user.id).count()
 	if total_likes_by_this_user>=1:
 		response = await content_base_recommander.recommend(db, request.current_user, page, page_size)
+		total_blogs = response["total_results"]
+		blogs = response["results"]
+		for i in range(len(blogs)):
+			blogs[i] = blogs[i]["source"]
 	else:
 		response = popularity_base_recommander.recommend(db, request.current_user, page, page_size)
-	
-	total_blogs = response["total_results"]
-	blogs = response["results"]
+		total_blogs = response["total_results"]
+		blogs = response["results"]
 			
 	return { 
 		"metadata":{
@@ -143,7 +146,8 @@ def get_blog(request: Request, blog_id:int = None, db:Session = Depends(get_db))
 	).group_by( models.BlogView.blog_id ).subquery()
 
 	blog = db.query(
-		models.Blog.id, models.Blog.title, models.Blog.content, models.Blog.author_id, models.Blog.read_time,
+		models.Blog.id, models.Blog.title, models.Blog.content, models.Blog.author_id, 
+		models.Blog.read_time, models.Blog.created_on,
 		blog_like.columns.get("like_count"), 
 		blog_comment.columns.get("comment_count"),
 		blog_view.columns.get("view_count")
@@ -169,7 +173,7 @@ def get_blog(request: Request, blog_id:int = None, db:Session = Depends(get_db))
 				models.UserDetail.last_name,
 				models.UserDetail.image,
 			).join(
-				models.UserDetail, models.UserDetail.user_id==models.User.id
+				models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True
 			).filter(models.User.id==author_id).first()
 		)
 
@@ -255,7 +259,6 @@ async def search(request: Request, page:int =1, page_size:int = 10, db:Session =
 					}, 
 				}
 			)
-		print(should_search)
 		response = await es_search_blogs({
 			"from": str((page-1)*page_size),
 			"size": str(page_size),
@@ -276,7 +279,7 @@ async def search(request: Request, page:int =1, page_size:int = 10, db:Session =
 					models.UserDetail.last_name,
 					models.UserDetail.image,
 				).join(
-					models.UserDetail, models.UserDetail.user_id==models.User.id
+					models.UserDetail, models.UserDetail.user_id==models.User.id, isouter=True
 				).filter(models.User.id==author_id).first()
 			)
 
